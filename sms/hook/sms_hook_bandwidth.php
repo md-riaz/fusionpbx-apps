@@ -9,7 +9,7 @@ if ($debug) {
 }
 
 if (check_acl()) {
-	if ($_SERVER['CONTENT_TYPE'] == 'application/json; charset=utf-8') {
+	if (isset($_SERVER['CONTENT_TYPE']) && stripos($_SERVER['CONTENT_TYPE'], 'application/json') === 0) {
 		$data = json_decode(file_get_contents("php://input"));
 		if (is_array($data)) {
 			$from = $data[0]->message->from;
@@ -42,23 +42,23 @@ if (check_acl()) {
 
 		switch (strtolower($msg_type)) {
 			case 'message-delivered': {
-				//				$text .= "Message was delivered";
-//				route_and_send_sms($from, $to, $text);
-				return http_response_code(200);
-				break;
-			}
+					//				$text .= "Message was delivered";
+					//				route_and_send_sms($from, $to, $text);
+					return http_response_code(200);
+					break;
+				}
 			case 'message-failed': {
-				$text = "Message failed to be delivered";
-				$text .= " Reason: " . ucfirst(str_replace('-', ' ', $desc));
-				error_log("Message Failed to send " . print_r($data, false));
-				route_and_send_sms($from, $to, $text);
-				return http_response_code(200);
-				break;
-			}
+					$text = "Message failed to be delivered";
+					$text .= " Reason: " . ucfirst(str_replace('-', ' ', $desc));
+					error_log("Message Failed to send " . print_r($data, false));
+					route_and_send_sms($from, $to, $text);
+					return http_response_code(200);
+					break;
+				}
 			default: {
-				route_and_send_sms($from, $to, $text);
-				return http_response_code(200);
-			}
+					route_and_send_sms($from, $to, $text);
+					return http_response_code(200);
+				}
 		}
 	} else {
 		error_log('[SMS] REQUEST: No SMS Data Received');
@@ -68,5 +68,3 @@ if (check_acl()) {
 	error_log('ACCESS DENIED [SMS]: ' . print_r($_SERVER['REMOTE_ADDR'], true));
 	die("access denied");
 }
-
-?>

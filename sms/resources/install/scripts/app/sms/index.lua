@@ -132,6 +132,17 @@ if direction == "inbound" then
 	reply = api:executeString(extension_status)
 	--------
 	freeswitch.consoleLog("NOTICE", "[sms] Ext status: "..reply .. "\n");
+
+	-- Extract SIP profile from the contact URI
+	local found_profile = reply:match("^sofia/([^/]+)/")
+	if not found_profile or reply == "error/user_not_registered" then
+		freeswitch.consoleLog("NOTICE",
+			"[sms] Target extension " .. extension .. " is not registered. Defaulting to 'internal'.\n")
+		found_profile = "internal"
+	else
+		freeswitch.consoleLog("NOTICE", "[sms] Using SIP profile: " .. found_profile .. "\n")
+	end
+
 	--------
 	if (reply == "error/user_not_registered") then
 		freeswitch.consoleLog("NOTICE", "[sms] Target extension " .. to .. " is not registered, not sending via SIMPLE.\n")
@@ -143,7 +154,7 @@ if direction == "inbound" then
 		event:addHeader("from_user", from)
 		event:addHeader("from_host", domain_name)
 		event:addHeader("from_full", "sip:" .. from .. "@" .. domain_name)
-		event:addHeader("sip_profile", "internal")
+		event:addHeader("sip_profile", found_profile)
 		event:addHeader("to", to)
 		event:addHeader("to_user", extension)
 		event:addHeader("to_host", domain_name)
@@ -514,8 +525,8 @@ elseif direction == "outbound" then
 						' -H "Content-type: application/json" ' ..
 							' -d \'{"from": "+' ..
 									outbound_caller_id_number ..
-									'", "to": "+' .. to ..
-									'", ' .. ' "text": "' .. body ..
+									'", "to": ["+' .. to ..
+									'"], ' .. ' "text": "' .. body ..
 									'", "applicationId": "' .. application_id ..
 									'" }\''
 		elseif (carrier == "thinq") then
@@ -556,7 +567,7 @@ elseif direction == "outbound" then
 		local result = handle:read("*a")
 		handle:close()
 		if (debug["info"]) then
-			freeswitch.consoleLog("notice", "[sms] CURL Returns: " .. result .. "\n")
+			freeswitch.consoleLog("info", "[sms] CURL Returns: " .. result .. "\n")
 		end
 	else
 		-- XML content
