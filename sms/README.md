@@ -4,7 +4,7 @@
 3. ```cd fusionpbx-apps/; cp -R sms /var/www/fusionpbx/app/```
 4. ```cd /usr/share/freeswitch/scripts/app```
 5. ```ln -s /var/www/fusionpbx/app/sms/resources/install/scripts/app/sms```
-6. ```cp /var/www/fusionpbx/app/sms/resources/templates/conf/chatplan/default.xml /etc/freeswitch/conf/chatplan/default.xml```
+6. ```cp /var/www/fusionpbx/app/sms/resources/templates/conf/chatplan/default.xml /etc/freeswitch/chatplan/default.xml```
 7. Go to GUI
 8. Upgrades -> SCHEMA; APP DEFAULTS; MENU DEFAULTS; PERMISSION DEFAULTS
 9. Log out and back in
