@@ -40,9 +40,9 @@ local json = require "resources.functions.lunajson"
 -- custom functions for acrobits app start
 
 local log = function(msg)
-	if debug and debug["info"] then
-		freeswitch.consoleLog("notice", "[sms] " .. msg .. "\n")
-	end
+    if debug and debug["info"] then
+        freeswitch.consoleLog("notice", "[sms] " .. msg .. "\n")
+    end
 end
 
 -- Generate a random UUID (v4-like)
@@ -56,66 +56,40 @@ end
 
 -- fix broken JSON
 local function fix_broken_acrobits_json(str)
-    log("Starting fix_broken_acrobits_json: " .. str)
 
-    -- Step 1: Quote unquoted keys
-    log("Quoting unquoted keys")
-    str = str:gsub('([{,])%s*([%w_%-]+)%s*:', function(prefix, key)
-        return prefix .. '"' .. key .. '":'
-    end)
-    log("After quoting keys: " .. str)
+    log("Original input: " .. str)
 
-    -- Step 2: Quote unquoted values (including URLs, MIME types, filenames)
-    log("Quoting unquoted values")
-    str = str:gsub(':%s*([^"%[%]{},%s]+)', function(val)
-        val = val:match("^%s*(.-)%s*$")
-        if val == "true" or val == "false" or val == "null" or tonumber(val) then
+    -- Quote unquoted keys: {key: → {"key":
+    str = str:gsub('([%{%}%[%],])%s*([%a%d%_%-]+)%s*:', '%1"%2":')
+    log("After quoting keys", str)
+
+    -- Quote unquoted string values: key: value → key: "value"
+    str = str:gsub(':%s*([^%[%]%"%{%,}%}]+)', function(val)
+        val = val:match("^%s*(.-)%s*$") -- trim
+        local lower = val:lower()
+        if tonumber(val) or lower == "true" or lower == "false" or lower == "null" then
             return ": " .. val
         else
             return ': "' .. val:gsub('"', '\\"') .. '"'
         end
     end)
-    log("After quoting values: " .. str)
+    log("After quoting values", str)
 
-    -- Step 3: Join broken quoted strings (e.g., "Nice" work → "Nice work")
-    log("Fixing broken quoted strings")
-    str = str:gsub('"%s*([^"]+)"%s+([%w_%-]+)', function(a, b)
-        return '"' .. a .. ' ' .. b .. '"'
+    -- Minify "content" base64 fields
+    str = str:gsub('"content"%s*:%s*"([^"]+)"', function(base64)
+        return '"content": "' .. base64:gsub("%s+", "") .. '"'
     end)
-	log("After fixing broken quoted strings: " .. str)
+    log("After minifying base64 content", str)
 
-    -- Step 4: Fix over-quoted schemes like "https: //..." → "https://..."
-    str = str:gsub('"(%w+):%s*//', '"%1://')
-
-    -- Step 5: Fix "filename".ext → "filename.ext"
-    str = str:gsub('"([^"]+)"%.(%w+)', function(name, ext)
-        return '"' .. name .. '.' .. ext .. '"'
-    end)
-	log("After fixing filename: " .. str)
-
-    -- Step 6: Clean whitespace from base64 content fields
-    log("Cleaning base64 content")
-    str = str:gsub('"content"%s*:%s*"([^"]-)"', function(content)
-        return '"content": "' .. content:gsub("%s+", "") .. '"'
-    end)
-	log("After cleaning base64 content: " .. str)
-
-    -- Step 7: Remove trailing commas
-    log("Removing trailing commas")
-    str = str:gsub(',%s*([}%]])', '%1')
-
-    log("Finished fix_broken_acrobits_json: " .. str)
     return str
 end
-
-
 
 -- Decode Acrobits JSON body
 local function decode_acrobits_message_body(body)
     local clean = fix_broken_acrobits_json(body)
     local ok, parsed = pcall(json.decode, clean)
     if not ok or type(parsed) ~= "table" then
-		log("Failed to parse Acrobits JSON: " .. clean)
+        log("Failed to parse Acrobits JSON: " .. clean)
         return body, nil
     end
 
@@ -125,8 +99,8 @@ local function decode_acrobits_message_body(body)
 
     -- add freeswitch.consoleLog for debugging
     log("Parsed Acrobits JSON: " .. json.encode(parsed))
-	log("Text: " .. text)
-	log("Attachments: " .. json.encode(attachments))
+    log("Text: " .. text)
+    log("Attachments: " .. json.encode(attachments))
 
     return text, attachments
 end
@@ -134,7 +108,7 @@ end
 -- Download file from URL
 local function download_encrypted_file(url, save_path)
     local cmd = string.format("curl -s -L -o '%s' '%s'", save_path, url)
-	log("Downloading file cmd: " .. cmd)
+    log("Downloading file cmd: " .. cmd)
     local ok, exit_type, code = os.execute(cmd)
     if type(ok) == "number" then
         return ok == 0
@@ -162,20 +136,20 @@ end
 
 -- Upload file to Bandwidth and return the media URL
 local function upload_to_bandwidth(filename, file_path, bandwidth_media_url, access_key, secret_key, content_type)
-    -- Replace the last occurrence of "message" with "media" in the URL
-    local updated_url = bandwidth_media_url:gsub("message$", "media")
+    -- Replace the last occurrence of "messages" with "media" in the URL
+    local updated_url = bandwidth_media_url:gsub("messages$", "media")
     local media_id = uuid()
     filename = media_id .. "_" .. filename
     local url = string.format("%s/%s", updated_url, filename)
     local auth = access_key .. ":" .. secret_key
-    local cmd = string.format("curl -s -X PUT '%s' -u '%s' -H 'Content-Type: %s' --data-binary '@%s'", url, auth,
+    local cmd = string.format("curl -v -X PUT '%s' -u '%s' -H 'Content-Type: %s' --data-binary '@%s'", url, auth,
         content_type, file_path)
-	log("Bandwidth upload cmd: " .. cmd)
+    log("Bandwidth upload cmd: " .. cmd)
     local handle = io.popen(cmd)
     local result = handle:read("*a")
     handle:close()
-	log("Bandwidth upload response: " .. tostring(result))
-	log("Bandwidth upload response: " .. tostring(result))
+    log("Bandwidth upload response: " .. tostring(result))
+    log("Bandwidth upload response: " .. tostring(result))
     return url -- Assume upload is successful and return the URL
 end
 -- custom functions for acrobits app end
@@ -622,29 +596,30 @@ elseif direction == "outbound" then
                     local tmp_enc = "/tmp/enc_" .. filename
                     local tmp_dec = "/tmp/dec_" .. filename
 
-					log(string.format("Attachment #%d: url=%s, key=%s, filename=%s", i, tostring(url), tostring(key), tostring(filename)))
+                    log(string.format("Attachment #%d: url=%s, key=%s, filename=%s", i, tostring(url), tostring(key),
+                        tostring(filename)))
 
                     if download_encrypted_file(url, tmp_enc) then
-						log("[sms] Downloaded encrypted file to: " .. tmp_enc)
+                        log("[sms] Downloaded encrypted file to: " .. tmp_enc)
                         if decrypt_file_with_openssl(tmp_enc, key, tmp_dec) then
-							log("[sms] Decrypted file to: " .. tmp_dec)
+                            log("[sms] Decrypted file to: " .. tmp_dec)
                             local content_type = att["content-type"] or "image/jpeg"
                             local media_url = upload_to_bandwidth(filename, tmp_dec, api_url, access_key, secret_key,
                                 content_type)
-							if media_url then
-								table.insert(media_urls, media_url)
-								log("[sms] Uploaded Bandwidth media: " .. media_url)
-							else
-								-- clean files
-								os.remove(tmp_enc)
-								os.remove(tmp_dec)
-								log("[sms] Failed to upload media to Bandwidth")
+                            if media_url then
+                                table.insert(media_urls, media_url)
+                                log("[sms] Uploaded Bandwidth media: " .. media_url)
+                            else
+                                log("[sms] Failed to upload media to Bandwidth")
                             end
-						else
-							log("[sms] Failed to decrypt file: " .. tmp_enc)
+                            -- Clean up temporary files
+                            os.remove(tmp_enc)
+                            -- os.remove(tmp_dec)
+                        else
+                            log("[sms] Failed to decrypt file: " .. tmp_enc)
                         end
-					else
-						log("[sms] Failed to download encrypted file: " .. tostring(url))
+                    else
+                        log("[sms] Failed to download encrypted file: " .. tostring(url))
                     end
                 end
             end
@@ -662,7 +637,7 @@ elseif direction == "outbound" then
 
             local json_payload = json.encode(payload_table)
 
-			log("[sms] json_payload: " .. json_payload)
+            log("[sms] json_payload: " .. json_payload)
 
             -- final command to execute
             cmd = "curl -v -X POST " .. api_url .. " -u " .. access_key .. ":" .. secret_key ..
