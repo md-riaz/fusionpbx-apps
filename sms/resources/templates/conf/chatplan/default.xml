@@ -31,7 +31,7 @@
 -->
                 <extension name="other">
                         <condition field="to" expression="^(.*)$">
-                                <action application="set" data="final_delivery=true"/>
+				<!-- <action application="set" data="final_delivery=true"/> -->
                                 <!-- <action application="send"/> -->
                         </condition>
                 </extension>
