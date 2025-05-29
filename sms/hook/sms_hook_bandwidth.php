@@ -48,7 +48,7 @@ if (check_acl()) {
 					break;
 				}
 			case 'message-failed': {
-					$text = "Message failed to be delivered";
+					$text = "Message failed to be delivered (" . $from . " to " . $to . ")";
 					$text .= " Reason: " . ucfirst(str_replace('-', ' ', $desc));
 					error_log("Message Failed to send " . print_r($data, false));
 					route_and_send_sms($from, $to, $text);
