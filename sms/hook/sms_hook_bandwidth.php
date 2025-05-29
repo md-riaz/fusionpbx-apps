@@ -11,6 +11,12 @@ if ($debug) {
 if (check_acl()) {
 	if (isset($_SERVER['CONTENT_TYPE']) && stripos($_SERVER['CONTENT_TYPE'], 'application/json') === 0) {
 		$data = json_decode(file_get_contents("php://input"));
+		
+		http_response_code(200);
+		if (function_exists('fastcgi_finish_request')) {
+			fastcgi_finish_request();  // ✅ Bandwidth gets HTTP 200 immediately
+		}
+		
 		if (is_array($data)) {
 			$from = $data[0]->message->from;
 			$to = $data[0]->message->owner;
