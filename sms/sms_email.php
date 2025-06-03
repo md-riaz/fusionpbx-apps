@@ -147,8 +147,34 @@ function send_sms_to_email($from, $to, $body, $media = null) {
 				}
 			}
 		}
+		// Generic MMS support for other carriers
 		else {
-			$email_message .= "";
+			if (gettype($media)=="array") {
+				$email_txt = 'To: ' . $to . '<br>Msg: ' . $body . '<br>MMS Message received, see attachment';
+
+				$email_message = "" . $email_txt . "";
+				foreach ($media as $attachment) {
+					$url = $attachment->url;
+					$start = strrpos($url, '/') == -1 ? strrpos($url, '//') : strrpos($url, '/')+1;
+					$fileatt_name = substr($url, $start, strlen($url));
+
+					// download attachment from URL (no need to save to disk)
+					$file_content = @file_get_contents($url);
+					if ($file_content !== false) {
+						$fileatt_type = $attachment->content_type;
+						$attdata = chunk_split(base64_encode($file_content));
+
+						$email_message .= "--{$mime_boundary}\n" . "Content-Type: {$fileatt_type};\n" .
+							" name = \"{$fileatt_name}\"\n" . "Content-Disposition: inline;\n" . " filename = \"{$fileatt_name}\"\n" .
+							"Content-Transfer-Encoding:base64\n\n" . $attdata . "\n\n" . "--{$mime_boundary}--\n";
+						error_log("email_message: " . $email_message);
+					} else {
+						error_log("Failed to download MMS attachment from URL: " . $url);
+					}
+				}
+			} else {
+				$email_message .= "";
+			}
 		}
 		if ($debug) {
 			error_log("headers: " . $headers);
