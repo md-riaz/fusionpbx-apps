@@ -28,7 +28,7 @@ local Database = require "resources.functions.database"
 dbh = Database.new("system")
 
 -- debug
-debug["info"] = true
+-- debug["info"] = true
 -- debug["sql"] = true
 
 -- set the api
@@ -38,7 +38,6 @@ api = freeswitch.API()
 local json = require "resources.functions.lunajson"
 
 -- custom functions for acrobits app start
-
 local log = function(msg)
     if debug and debug["info"] then
         freeswitch.consoleLog("notice", "[sms] " .. msg .. "\n")
@@ -54,40 +53,9 @@ local function uuid()
     end)
 end
 
--- fix broken JSON
-local function fix_broken_acrobits_json(str)
-
-    log("Original input: " .. str)
-
-    -- Quote unquoted keys: {key: → {"key":
-    str = str:gsub('([%{%}%[%],])%s*([%a%d%_%-]+)%s*:', '%1"%2":')
-    log("After quoting keys", str)
-
-    -- Quote unquoted string values: key: value → key: "value"
-    str = str:gsub(':%s*([^%[%]%"%{%,}%}]+)', function(val)
-        val = val:match("^%s*(.-)%s*$") -- trim
-        local lower = val:lower()
-        if tonumber(val) or lower == "true" or lower == "false" or lower == "null" then
-            return ": " .. val
-        else
-            return ': "' .. val:gsub('"', '\\"') .. '"'
-        end
-    end)
-    log("After quoting values", str)
-
-    -- Minify "content" base64 fields
-    str = str:gsub('"content"%s*:%s*"([^"]+)"', function(base64)
-        return '"content": "' .. base64:gsub("%s+", "") .. '"'
-    end)
-    log("After minifying base64 content", str)
-
-    return str
-end
-
 -- Decode Acrobits JSON body
 local function decode_acrobits_message_body(body)
-    local clean = fix_broken_acrobits_json(body)
-    local ok, parsed = pcall(json.decode, clean)
+    local ok, parsed = pcall(json.decode, body)
     if not ok or type(parsed) ~= "table" then
         log("Failed to parse Acrobits JSON: " .. clean)
         return body, nil
@@ -212,9 +180,16 @@ if direction == "inbound" then
     mailsent = argv[6]
     domain_name = string.match(to, "%@+(.+)")
     extension = string.match(to, "%d+")
+    is_json = pcall(json.decode, body) and true or false
+
     if (body ~= nil) then
-        body = urldecode(body)
+        if is_json then
+            body = body
+        else
+            body = urldecode(body)
+        end
     end
+
     savebody = body
     body = body:gsub("<br>", "\n")
 
@@ -248,10 +223,10 @@ if direction == "inbound" then
     end
 
     --------
-    if (reply == "error/user_not_registered") then
-        freeswitch.consoleLog("NOTICE",
-            "[sms] Target extension " .. to .. " is not registered, not sending via SIMPLE.\n")
-    else
+    -- if (reply == "error/user_not_registered") then
+    --     freeswitch.consoleLog("NOTICE",
+    --         "[sms] Target extension " .. to .. " is not registered, not sending via SIMPLE.\n")
+    -- else
         local event = freeswitch.Event("CUSTOM", "SMS::SEND_MESSAGE")
         event:addHeader("proto", "sip")
         event:addHeader("dest_proto", "sip")
@@ -264,7 +239,12 @@ if direction == "inbound" then
         event:addHeader("to_user", extension)
         event:addHeader("to_host", domain_name)
         event:addHeader("subject", "SIMPLE MESSAGE")
-        event:addHeader("type", "text/plain")
+        -- Add Acrobits-specific header if detected, else original header
+        if is_json then
+            event:addHeader("type", "application/x-acro-filetransfer+json")
+        else
+            event:addHeader("type", "text/plain")
+        end
         event:addHeader("hint", "the hint")
         event:addHeader("replying", "true")
         event:addHeader("DP_MATCH", to)
@@ -274,7 +254,7 @@ if direction == "inbound" then
             freeswitch.consoleLog("info", event:serialize() .. "\n")
         end
         event:fire()
-    end
+    -- end
     to = extension
 
     if (not mailsent == 1) then
@@ -384,7 +364,12 @@ elseif direction == "outbound" then
             body = string.sub(smsraw, smst2end + 1)
         end
     end
-    body = body:gsub('%"', "")
+    log("[sms] BODY: " .. tostring(body))
+    -- If body is valid JSON, do nothing; else escape double quotes
+    local ok, _ = pcall(json.decode, body)
+    if not ok then
+        body = body:gsub('"', '\\"')
+    end
     savebody = body
 
     -- Store Content-Type SIP header if present
