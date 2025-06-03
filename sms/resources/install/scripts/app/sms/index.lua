@@ -28,7 +28,7 @@ local Database = require "resources.functions.database"
 dbh = Database.new("system")
 
 -- debug
--- debug["info"] = true
+debug["info"] = true
 -- debug["sql"] = true
 
 -- set the api
@@ -386,6 +386,17 @@ elseif direction == "outbound" then
     end
     body = body:gsub('%"', "")
     savebody = body
+
+    -- Store Content-Type SIP header if present
+    content_type_header = nil
+    if smsraw ~= nil then
+        local ct = smsraw:match("Content%-type:%s*([%w%p]+)")
+        if ct then
+            content_type_header = ct
+        end
+        log("[sms] Content-Type header: " .. tostring(content_type_header))
+    end
+
     -- body = encodeString((body));
     body = body:gsub("\n", "\\n")
 
@@ -583,8 +594,15 @@ elseif direction == "outbound" then
             end
 
             -- Detect and process Acrobits attachments
-            local decoded_body, attachments = decode_acrobits_message_body(body)
-            body = decoded_body:gsub("'", "'\\''")
+            local decoded_body, attachments
+
+            if content_type_header == 'application/x-acro-filetransfer+json' then
+                decoded_body, attachments = decode_acrobits_message_body(body)
+            else
+                decoded_body = body
+                attachments = nil -- optional: explicitly clear
+            end
+            
             local media_urls = {}
 
             if attachments then
@@ -614,7 +632,7 @@ elseif direction == "outbound" then
                             end
                             -- Clean up temporary files
                             os.remove(tmp_enc)
-                            -- os.remove(tmp_dec)
+                            os.remove(tmp_dec)
                         else
                             log("[sms] Failed to decrypt file: " .. tmp_enc)
                         end
