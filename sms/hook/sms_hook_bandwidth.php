@@ -1,7 +1,7 @@
 <?php
 // show error logs
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// error_reporting(E_ALL);
+// ini_set('display_errors', 1);
 
 
 //includes files
@@ -126,7 +126,7 @@ function handleBandwidthMediaForAcrobits($text, $media = [])
 		$userId = '';
 	}
 
-	$mediaUrls = [];
+	$mediaPaths = [];
 
 	if (!empty($media) && is_array($media)) {
 
@@ -144,6 +144,10 @@ function handleBandwidthMediaForAcrobits($text, $media = [])
 			// Generate a unique filename while preserving the original extension
 			$ext = pathinfo($ori_fileatt_name, PATHINFO_EXTENSION);
 			$fileatt_name = uniqid('bw_', true) . ($ext ? '.' . $ext : '');
+
+			if (in_array($ext, ["xml", "smil"])) {
+				continue;
+			}
 
 			if (!empty($mms_attachment_temp_path)) {
 				$fileatt = $mms_attachment_temp_path;
@@ -215,9 +219,9 @@ function handleBandwidthMediaForAcrobits($text, $media = [])
 				$fileUrl = $protocol . $host . '/app/sms/tmp/' . basename($fileatt);
 			}
 
-			$mediaUrls[] = [
-				'url' => $fileUrl,
-				'content_type' => $contentType,
+			$mediaPaths[] = [
+				'name' => $fileatt_name,
+				'path' => $fileatt,
 			];
 
 			$acrobitsJson['attachments'][] = [
@@ -232,6 +236,6 @@ function handleBandwidthMediaForAcrobits($text, $media = [])
 	// Return both JSON string and array of media URLs
 	return [
 		'json' => $acrobitsJson ? json_encode($acrobitsJson, JSON_UNESCAPED_SLASHES) : null,
-		'media_urls' => empty($mediaUrls) ? null : (object) $mediaUrls
+		'media_urls' => $mediaPaths
 	];
 }
