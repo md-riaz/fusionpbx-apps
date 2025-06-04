@@ -28,7 +28,7 @@ local Database = require "resources.functions.database"
 dbh = Database.new("system")
 
 -- debug
--- debug["info"] = true
+--  debug["info"] = true
 -- debug["sql"] = true
 
 -- set the api
@@ -372,15 +372,20 @@ elseif direction == "outbound" then
     end
     savebody = body
 
-    -- Store Content-Type SIP header if present
+        -- Store Content-Type SIP header if present
     content_type_header = nil
-    if smsraw ~= nil then
-        local ct = smsraw:match("Content%-type:%s*([%w%p]+)")
+    -- Try to get Content-Type from message headers first
+    if message ~= nil then
+        content_type_header = message:getHeader("type")
+    end
+    -- Fallback: try to extract from smsraw if not found
+    if not content_type_header and smsraw ~= nil then
+        local ct = smsraw:match("type:%s*([%w%p]+)")
         if ct then
             content_type_header = ct
         end
-        log("[sms] Content-Type header: " .. tostring(content_type_header))
     end
+    log("[sms] Content-Type header: " .. tostring(content_type_header))
 
     -- body = encodeString((body));
     body = body:gsub("\n", "\\n")
