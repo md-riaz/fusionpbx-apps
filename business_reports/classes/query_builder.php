@@ -199,7 +199,8 @@ class query_builder {
 	 * Build call type condition
 	 */
 	private function build_call_type_condition($call_type) {
-		if ($this->call_type_mode == 'direction_field' && isset($this->field_mapping['direction'])) {
+		// v_xml_cdr has a direction field
+		if (isset($this->field_mapping['direction'])) {
 			$direction_field = $this->field_mapping['direction'];
 			
 			switch ($call_type) {
@@ -209,40 +210,6 @@ class query_builder {
 					return $direction_field . " = 'outbound'";
 				case 'local':
 					return $direction_field . " IN ('local', 'internal')";
-			}
-		} elseif ($this->call_type_mode == 'gateway' && isset($this->field_mapping['gateway_uuid'])) {
-			$gateway_field = $this->field_mapping['gateway_uuid'];
-			
-			switch ($call_type) {
-				case 'inbound':
-				case 'outbound':
-					return $gateway_field . " IS NOT NULL";
-				case 'local':
-					return $gateway_field . " IS NULL";
-			}
-		} elseif ($this->call_type_mode == 'pattern_match') {
-			// This would require caller/destination number pattern matching
-			// Implementation depends on internal extension patterns stored in config
-			$caller_field = $this->get_field('caller_id_number');
-			$dest_field = $this->get_field('destination_number');
-			
-			if (isset($this->config['internal_extension_pattern'])) {
-				// Validate pattern to prevent SQL injection - only allow alphanumeric, %, and _
-				$pattern = $this->config['internal_extension_pattern'];
-				if (!preg_match('/^[a-zA-Z0-9%_]+$/', $pattern)) {
-					// Invalid pattern - skip call type classification for safety
-					// This prevents SQL injection through malicious pattern configuration
-					return null;
-				}
-				
-				switch ($call_type) {
-					case 'inbound':
-						return $dest_field . " LIKE '" . $this->escape_sql_identifier($pattern) . "' AND " . $caller_field . " NOT LIKE '" . $this->escape_sql_identifier($pattern) . "'";
-					case 'outbound':
-						return $caller_field . " LIKE '" . $this->escape_sql_identifier($pattern) . "' AND " . $dest_field . " NOT LIKE '" . $this->escape_sql_identifier($pattern) . "'";
-					case 'local':
-						return $caller_field . " LIKE '" . $this->escape_sql_identifier($pattern) . "' AND " . $dest_field . " LIKE '" . $this->escape_sql_identifier($pattern) . "'";
-				}
 			}
 		}
 		

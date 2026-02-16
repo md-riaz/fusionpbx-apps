@@ -23,7 +23,7 @@
 	$text = $language->get();
 
 //load classes
-	require_once "classes/diagnostics.php";
+	require_once "classes/config.php";
 	require_once "classes/view_manager.php";
 	require_once "classes/query_builder.php";
 	require_once "classes/metric_registry.php";
@@ -39,15 +39,8 @@
 		exit;
 	}
 
-//load diagnostics config
-	$diagnostics = new report_diagnostics($database, $_SESSION['domain_uuid']);
-	$diagnostics_config = $diagnostics->load_config();
-
-	if (!$diagnostics_config) {
-		message::add($text['message-cdr_not_configured'], 'negative');
-		header("Location: diagnostics.php");
-		exit;
-	}
+//load config
+	$diagnostics_config = report_config::get_config();
 
 //load view
 	$view_manager = new view_manager($database, $_SESSION['domain_uuid'], $_SESSION['user_uuid']);

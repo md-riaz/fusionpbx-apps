@@ -30,9 +30,6 @@
 		$apps[$x]['permissions'][$y]['name'] = "business_report_delete";
 		$apps[$x]['permissions'][$y]['groups'][] = "superadmin";
 		$apps[$x]['permissions'][$y]['groups'][] = "admin";
-		$y++;
-		$apps[$x]['permissions'][$y]['name'] = "business_report_diagnostics";
-		$apps[$x]['permissions'][$y]['groups'][] = "superadmin";
 
 	//schema details - v_report_views table
 		$y = 0;
@@ -133,55 +130,5 @@
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "can_edit";
 		$apps[$x]['db'][$y]['fields'][$z]['type'] = "boolean";
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Permission to edit the report";
-
-	//schema details - v_report_diagnostics table
-		$y++;
-		$apps[$x]['db'][$y]['table']['name'] = "v_report_diagnostics";
-		$apps[$x]['db'][$y]['table']['parent'] = "";
-		$z = 0;
-		$apps[$x]['db'][$y]['fields'][$z]['name'] = "report_diagnostic_uuid";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['pgsql'] = "uuid";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['sqlite'] = "text";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['mysql'] = "char(36)";
-		$apps[$x]['db'][$y]['fields'][$z]['key']['type'] = "primary";
-		$z++;
-		$apps[$x]['db'][$y]['fields'][$z]['name'] = "domain_uuid";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['pgsql'] = "uuid";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['sqlite'] = "text";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['mysql'] = "char(36)";
-		$apps[$x]['db'][$y]['fields'][$z]['key']['type'] = "foreign";
-		$apps[$x]['db'][$y]['fields'][$z]['key']['reference']['table'] = "v_domains";
-		$apps[$x]['db'][$y]['fields'][$z]['key']['reference']['field'] = "domain_uuid";
-		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Domain UUID (null for global config)";
-		$z++;
-		$apps[$x]['db'][$y]['fields'][$z]['name'] = "cdr_source";
-		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
-		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "CDR table/view name";
-		$z++;
-		$apps[$x]['db'][$y]['fields'][$z]['name'] = "field_mapping_json";
-		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
-		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "JSON mapping of logical to actual field names";
-		$z++;
-		$apps[$x]['db'][$y]['fields'][$z]['name'] = "call_type_mode";
-		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
-		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Mode for call type classification: direction_field, pattern_match, gateway";
-		$z++;
-		$apps[$x]['db'][$y]['fields'][$z]['name'] = "counting_unit";
-		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
-		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Counting unit: row or call";
-		$z++;
-		$apps[$x]['db'][$y]['fields'][$z]['name'] = "call_id_field";
-		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
-		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Field name for unique call identifier";
-		$z++;
-		$apps[$x]['db'][$y]['fields'][$z]['name'] = "config_json";
-		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
-		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Additional configuration as JSON";
-		$z++;
-		$apps[$x]['db'][$y]['fields'][$z]['name'] = "updated_at";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['pgsql'] = "timestamptz";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['sqlite'] = "datetime";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['mysql'] = "timestamp";
-		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "When the configuration was last updated";
 
 ?>

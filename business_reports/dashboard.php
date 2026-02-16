@@ -24,18 +24,9 @@
 
 //load classes
 	require_once "classes/view_manager.php";
-	require_once "classes/diagnostics.php";
 
 //get the database object
 	$database = new database;
-
-//check if diagnostics are configured
-	$diagnostics = new report_diagnostics($database, $_SESSION['domain_uuid']);
-	$config = $diagnostics->load_config();
-	
-	if (!$config) {
-		$config_warning = true;
-	}
 
 //load view manager
 	$view_manager = new view_manager($database, $_SESSION['domain_uuid'], $_SESSION['user_uuid']);
@@ -66,19 +57,9 @@
 	if (permission_exists('business_report_add')) {
 		echo button::create(['type'=>'button','label'=>$text['button-new_report'],'icon'=>$_SESSION['theme']['button_icon_add'],'link'=>'view_builder.php']);
 	}
-	if (permission_exists('business_report_diagnostics')) {
-		echo button::create(['type'=>'button','label'=>$text['title-diagnostics'],'icon'=>$_SESSION['theme']['button_icon_settings'],'link'=>'diagnostics.php']);
-	}
 	echo "	</div>\n";
 	echo "	<div style='clear: both;'></div>\n";
 	echo "</div>\n";
-
-//show configuration warning
-	if ($config_warning) {
-		echo "<div class='message warning'>";
-		echo $text['message-cdr_not_configured'];
-		echo "</div>";
-	}
 
 //show the list of views
 	if (count($views) > 0) {
