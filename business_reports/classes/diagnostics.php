@@ -113,10 +113,21 @@ class report_diagnostics {
 			return $data; // Invalid table name, return empty
 		}
 		
+		// Check if start_stamp column exists for ordering
+		$columns = $this->introspect_columns($table_name);
+		$has_start_stamp = false;
+		foreach ($columns as $col) {
+			if ($col['name'] == 'start_stamp') {
+				$has_start_stamp = true;
+				break;
+			}
+		}
+		
 		try {
 			// Properly escape table name by quoting it
 			$quoted_table = $this->quote_identifier($table_name);
-			$sql = "SELECT * FROM " . $quoted_table . " ORDER BY start_stamp DESC LIMIT " . (int)$limit;
+			$order_clause = $has_start_stamp ? " ORDER BY start_stamp DESC" : "";
+			$sql = "SELECT * FROM " . $quoted_table . $order_clause . " LIMIT " . (int)$limit;
 			$result = $this->database->execute($sql);
 			
 			if ($result) {

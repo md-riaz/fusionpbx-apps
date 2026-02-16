@@ -230,7 +230,9 @@ class query_builder {
 				// Validate pattern to prevent SQL injection - only allow alphanumeric, %, and _
 				$pattern = $this->config['internal_extension_pattern'];
 				if (!preg_match('/^[a-zA-Z0-9%_]+$/', $pattern)) {
-					return null; // Invalid pattern, skip classification
+					// Invalid pattern - skip call type classification for safety
+					// This prevents SQL injection through malicious pattern configuration
+					return null;
 				}
 				
 				switch ($call_type) {
@@ -351,6 +353,15 @@ class query_builder {
 		// Validate sort direction
 		if ($sort_dir != 'ASC' && $sort_dir != 'DESC') {
 			$sort_dir = 'DESC';
+		}
+		
+		// Validate sort_by against allowed fields to prevent SQL injection
+		$allowed_sort_fields = array('start_date', 'group_dimension', 'total_calls', 'connected_calls', 
+									  'not_connected_calls', 'talk_time_sec', 'asr', 'acd_sec', 
+									  'avg_ring_sec', 'no_answer_calls', 'busy_calls', 'failed_calls');
+		
+		if (!in_array($sort_by, $allowed_sort_fields)) {
+			$sort_by = 'start_date'; // Default to safe value
 		}
 		
 		return $sort_by . " " . $sort_dir;

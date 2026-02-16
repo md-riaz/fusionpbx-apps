@@ -23,7 +23,7 @@
 
 //check the permission
 	if(defined('STDIN')) {
-		$document_root = str_replace("\\", "/", $_SERVER["PHP_SELF"]);
+		$document_root = str_replace("\\", "/", $_SERVER["SCRIPT_FILENAME"]);
 		$document_root = dirname(dirname(dirname($document_root)));
 		$_SERVER["DOCUMENT_ROOT"] = $document_root;
 		define('PROJECT_PATH', $document_root);
