@@ -227,15 +227,19 @@ class query_builder {
 			$dest_field = $this->get_field('destination_number');
 			
 			if (isset($this->config['internal_extension_pattern'])) {
+				// Validate pattern to prevent SQL injection - only allow alphanumeric, %, and _
 				$pattern = $this->config['internal_extension_pattern'];
+				if (!preg_match('/^[a-zA-Z0-9%_]+$/', $pattern)) {
+					return null; // Invalid pattern, skip classification
+				}
 				
 				switch ($call_type) {
 					case 'inbound':
-						return $dest_field . " LIKE '" . $pattern . "' AND " . $caller_field . " NOT LIKE '" . $pattern . "'";
+						return $dest_field . " LIKE '" . $this->escape_sql_identifier($pattern) . "' AND " . $caller_field . " NOT LIKE '" . $this->escape_sql_identifier($pattern) . "'";
 					case 'outbound':
-						return $caller_field . " LIKE '" . $pattern . "' AND " . $dest_field . " NOT LIKE '" . $pattern . "'";
+						return $caller_field . " LIKE '" . $this->escape_sql_identifier($pattern) . "' AND " . $dest_field . " NOT LIKE '" . $this->escape_sql_identifier($pattern) . "'";
 					case 'local':
-						return $caller_field . " LIKE '" . $pattern . "' AND " . $dest_field . " LIKE '" . $pattern . "'";
+						return $caller_field . " LIKE '" . $this->escape_sql_identifier($pattern) . "' AND " . $dest_field . " LIKE '" . $this->escape_sql_identifier($pattern) . "'";
 				}
 			}
 		}
@@ -427,6 +431,14 @@ class query_builder {
 		$string = str_replace('%', '\\%', $string);
 		$string = str_replace('_', '\\_', $string);
 		return $string;
+	}
+	
+	/**
+	 * Escape SQL identifier (for LIKE patterns)
+	 */
+	private function escape_sql_identifier($string) {
+		// Remove any single quotes and backslashes for safety
+		return str_replace(array("'", "\\"), array("''", "\\\\"), $string);
 	}
 	
 	/**

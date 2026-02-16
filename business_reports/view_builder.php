@@ -147,7 +147,7 @@
 
 echo "<div style='margin: 20px;'>\n";
 
-echo "<form method='post' action='" . ($_SERVER['PHP_SELF'] . ($view_uuid ? "?id=" . $view_uuid : "")) . "'>\n";
+echo "<form method='post' action='view_builder.php" . ($view_uuid ? "?id=" . htmlspecialchars($view_uuid) : "") . "'>\n";
 echo "<input type='hidden' name='action' value='save' />\n";
 
 echo "<table class='tr_hover' width='100%' cellpadding='0' cellspacing='0' border='0'>\n";

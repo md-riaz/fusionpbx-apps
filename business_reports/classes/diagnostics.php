@@ -107,8 +107,16 @@ class report_diagnostics {
 	public function get_sample_data($table_name, $limit = 20) {
 		$data = array();
 		
+		// Validate table_name against known CDR sources for security
+		$valid_tables = $this->find_cdr_sources();
+		if (!in_array($table_name, $valid_tables)) {
+			return $data; // Invalid table name, return empty
+		}
+		
 		try {
-			$sql = "SELECT * FROM " . $table_name . " ORDER BY start_stamp DESC LIMIT " . (int)$limit;
+			// Properly escape table name by quoting it
+			$quoted_table = $this->quote_identifier($table_name);
+			$sql = "SELECT * FROM " . $quoted_table . " ORDER BY start_stamp DESC LIMIT " . (int)$limit;
 			$result = $this->database->execute($sql);
 			
 			if ($result) {
@@ -165,6 +173,25 @@ class report_diagnostics {
 	 * Test for double counting (multiple legs per call)
 	 */
 	public function test_double_counting($table_name, $call_id_field, $domain_uuid = null) {
+		// Validate table_name
+		$valid_tables = $this->find_cdr_sources();
+		if (!in_array($table_name, $valid_tables)) {
+			return null;
+		}
+		
+		// Validate call_id_field against known columns
+		$columns = $this->introspect_columns($table_name);
+		$valid_field = false;
+		foreach ($columns as $col) {
+			if ($col['name'] == $call_id_field) {
+				$valid_field = true;
+				break;
+			}
+		}
+		if (!$valid_field) {
+			return null;
+		}
+		
 		try {
 			$where = "";
 			$params = array();
@@ -174,7 +201,10 @@ class report_diagnostics {
 				$params['domain_uuid'] = $domain_uuid;
 			}
 			
-			$sql = "SELECT COUNT(*) as row_count, COUNT(DISTINCT " . $call_id_field . ") as unique_calls FROM " . $table_name . $where . " LIMIT 10000";
+			$quoted_table = $this->quote_identifier($table_name);
+			$quoted_field = $this->quote_identifier($call_id_field);
+			
+			$sql = "SELECT COUNT(*) as row_count, COUNT(DISTINCT " . $quoted_field . ") as unique_calls FROM " . $quoted_table . $where . " LIMIT 10000";
 			$result = $this->database->execute($sql, $params);
 			
 			if ($result) {
@@ -323,6 +353,20 @@ class report_diagnostics {
 		}
 		
 		return $recommendations;
+	}
+	
+	/**
+	 * Quote identifier for SQL safety
+	 */
+	private function quote_identifier($identifier) {
+		// Remove any dangerous characters and quote appropriately
+		$identifier = preg_replace('/[^a-zA-Z0-9_]/', '', $identifier);
+		
+		if ($this->db_type == 'postgresql') {
+			return '"' . $identifier . '"';
+		} else {
+			return '`' . $identifier . '`';
+		}
 	}
 }
 

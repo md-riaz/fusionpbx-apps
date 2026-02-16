@@ -60,20 +60,54 @@
 	}
 
 //handle export request
-	if (isset($_GET['export']) && $_GET['export'] == 'csv' && isset($_POST['results_data'])) {
-		$results = json_decode($_POST['results_data'], true);
-		if ($results) {
+	if (isset($_GET['export']) && $_GET['export'] == 'csv') {
+		// Re-execute query instead of trusting POST data
+		try {
 			$db_type = $database->driver();
-			$metric_registry = new metric_registry(
-				$db_type,
-				$diagnostics_config['field_mapping'],
-				$diagnostics_config['counting_unit'],
-				$diagnostics_config['call_id_field']
-			);
-			$exporter = new report_exporter($metric_registry);
-			$filename = preg_replace('/[^a-z0-9_-]/i', '_', $view['name']) . '_' . date('Y-m-d_His') . '.csv';
-			$exporter->export_csv($results, $view['definition'], $filename);
-			exit;
+			$query_builder = new query_builder($db_type, $diagnostics_config, $_SESSION['domain_uuid']);
+			
+			$query_plan = $query_builder->build_query($view['definition']);
+			
+			// Execute query
+			$result = $database->execute($query_plan['sql'], $query_plan['params']);
+			$results = array();
+			
+			if ($result) {
+				while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
+					$results[] = $row;
+				}
+			}
+			
+			// Post-process computed metrics
+			if (!empty($query_plan['post_process'])) {
+				foreach ($results as &$row) {
+					foreach ($query_plan['post_process'] as $instruction) {
+						$metric_id = $instruction['metric'];
+						
+						if ($metric_id == 'asr' && isset($row['connected_calls']) && isset($row['total_calls'])) {
+							$row['asr'] = $row['total_calls'] > 0 ? ($row['connected_calls'] / $row['total_calls']) * 100 : 0;
+						} elseif ($metric_id == 'acd_sec' && isset($row['talk_time_sec']) && isset($row['connected_calls'])) {
+							$row['acd_sec'] = $row['connected_calls'] > 0 ? ($row['talk_time_sec'] / $row['connected_calls']) : 0;
+						}
+					}
+				}
+			}
+			
+			// Export
+			if ($results) {
+				$metric_registry = new metric_registry(
+					$db_type,
+					$diagnostics_config['field_mapping'],
+					$diagnostics_config['counting_unit'],
+					$diagnostics_config['call_id_field']
+				);
+				$exporter = new report_exporter($metric_registry);
+				$filename = preg_replace('/[^a-z0-9_-]/i', '_', $view['name']) . '_' . date('Y-m-d_His') . '.csv';
+				$exporter->export_csv($results, $view['definition'], $filename);
+				exit;
+			}
+		} catch (Exception $e) {
+			// Error during export
 		}
 	}
 
@@ -163,8 +197,9 @@ if (count($results) > 0) {
 	echo "<p><strong>Results:</strong> " . count($results) . " row(s)</p>\n";
 	
 	// Export form
-	echo "<form method='post' action='view_runner.php?id=" . $view_uuid . "&export=csv' id='export_form'>\n";
-	echo "<input type='hidden' name='results_data' value='" . htmlspecialchars(json_encode($results)) . "' />\n";
+	echo "<form method='get' action='view_runner.php' id='export_form'>\n";
+	echo "<input type='hidden' name='id' value='" . $view_uuid . "' />\n";
+	echo "<input type='hidden' name='export' value='csv' />\n";
 	echo button::create(['type'=>'submit','label'=>$text['button-export_csv'],'icon'=>$_SESSION['theme']['button_icon_download']]);
 	echo "</form>\n";
 	

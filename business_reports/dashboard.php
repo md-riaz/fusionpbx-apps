@@ -42,9 +42,9 @@
 	$views = $view_manager->get_accessible_views();
 
 //handle delete action
-	if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
+	if (isset($_POST['action']) && $_POST['action'] == 'delete' && isset($_POST['id'])) {
 		if (permission_exists('business_report_delete')) {
-			$result = $view_manager->delete_view($_GET['id']);
+			$result = $view_manager->delete_view($_POST['id']);
 			if ($result['success']) {
 				message::add($text['message-report_deleted']);
 			} else {
@@ -105,7 +105,11 @@
 				echo button::create(['type'=>'button','title'=>'Edit','icon'=>$_SESSION['theme']['button_icon_edit'],'link'=>'view_builder.php?id=' . $view['uuid']]);
 			}
 			if (permission_exists('business_report_delete') && $view['created_by'] == $_SESSION['user_uuid']) {
-				echo button::create(['type'=>'button','title'=>'Delete','icon'=>$_SESSION['theme']['button_icon_delete'],'link'=>'dashboard.php?action=delete&id=' . $view['uuid'],'onclick'=>"return confirm('Are you sure?')"]);
+				echo "<form method='post' action='dashboard.php' style='display:inline;'>";
+				echo "<input type='hidden' name='action' value='delete' />";
+				echo "<input type='hidden' name='id' value='" . $view['uuid'] . "' />";
+				echo button::create(['type'=>'submit','title'=>'Delete','icon'=>$_SESSION['theme']['button_icon_delete'],'onclick'=>"return confirm('Are you sure?')"]);
+				echo "</form>";
 			}
 			
 			echo "	</td>\n";
