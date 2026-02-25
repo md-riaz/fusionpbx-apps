@@ -153,11 +153,11 @@ class metric_registry {
 	private function metric_asr() {
 		return array(
 			'id' => 'asr',
-			'label' => 'ASR %',
+			'label' => 'Answer Seizure Ratio %',
 			'sql_expression' => null, // Computed in post-processing
 			'required_fields' => array('billsec'),
 			'format' => 'percentage',
-			'description' => 'Answer Seizure Ratio',
+			'description' => 'Answer Seizure Ratio (percentage of answered calls)',
 			'computed' => true,
 			'compute_from' => array('connected_calls', 'total_calls')
 		);
@@ -170,11 +170,11 @@ class metric_registry {
 	private function metric_acd() {
 		return array(
 			'id' => 'acd_sec',
-			'label' => 'ACD',
+			'label' => 'Average Call Duration',
 			'sql_expression' => null, // Computed in post-processing
 			'required_fields' => array('billsec'),
 			'format' => 'duration',
-			'description' => 'Average Call Duration',
+			'description' => 'Average Call Duration (average length of connected calls)',
 			'computed' => true,
 			'compute_from' => array('talk_time_sec', 'connected_calls')
 		);
